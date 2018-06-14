@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>INDEX</title>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script src="http://192.168.1.21:8081/socket.io/socket.io.js"></script>
+    <script>
+        //Connect to server
+        var socket = io.connect('http://192.168.1.21:8081', {
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: Infinity
+        });
+        //Create randow session ID for client
+        var client_session_id = '';
+        var exist_session_id = '';
+        var client_reconnect = false;
+        var started = false;
+        var room_mode = '';
+        socket.on('connect', () => {
+            //Client connected
+            console.log('You connected ')
+
+            document.getElementById("mainpage").style.display = 'block'
+            document.getElementById("page_start").style.display = 'none'
+            //Handle Client' Session ID
+            exist_session_id = localStorage.getItem('ClientSessionId');
+            console.log('Exist Session Id: ' + exist_session_id)
+            if (exist_session_id == null) {
+                //create new session id for client
+                var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                for (var i = 0; i < 5; i++)
+                    client_session_id += possible.charAt(Math.floor(Math.random() * possible.length));
+                //Storage session id in local
+                localStorage.setItem('ClientSessionId', client_session_id);
+
+                console.log('Session id created: ' + localStorage.getItem('ClientSessionId'))
+                //Send session client id to server
+                socket.emit('ClientSendSessionId', client_session_id)
+
+
+            } else {
+                console.log('ELSE in if, client session id: ' + client_session_id)
+                client_session_id = localStorage.getItem('ClientSessionId')
+                //Send session client id to server
+                socket.emit('ClientSendSessionId', client_session_id)
+                console.log('User was a Session id: ' + client_session_id)
+            }
+
+            //Listening event check reconnected from server 
+            socket.on('client_reconnected', (data) => {
+                console.log('Socket reconnect with server\n' + JSON.stringify(data))
+                if (data.need_receive == client_session_id) {
+                    alert('Welcome Reconnect')
+                } else {
+                    console.log('Else client reconnected')
+                }
+            })
+            //Listening event can ready to start game
+            socket.on('wait', (data) => {
+                console.log('Socket wait to join with server\n' + JSON.stringify(data))
+                document.getElementById("div_btn").disabled = true
+
+                if (data.admin_id == client_session_id) {
+                    console.log('Admin wait')
+                    // document.getElementById("rest_client").innerHTML = 'You is admin.Please wait ' + data.rest_client + ' client(s) '
+                    document.getElementById("mainpage").style.display = 'none'
+                    document.getElementById("page_start").style.display = 'block'
+                    document.getElementById("btn").src = './images/waiting.png'
+                } else if (data.second_id == client_session_id) {
+                    console.log('Second wait')
+                    document.getElementById("mainpage").style.display = 'none'
+                    document.getElementById("page_start").style.display = 'block'
+                    document.getElementById("btn").src = './images/waiting.png'
+                }
+                else if (data.third_id == client_session_id) {
+                    console.log('Third wait')
+                    document.getElementById("mainpage").style.display = 'none'
+                    document.getElementById("page_start").style.display = 'block'
+                    document.getElementById("btn").src = './images/waiting.png'
+                }
+                else{
+                    console.log('else of wait event')
+                }
+            })
+
+            //Listening event can ready to start game
+            socket.on('ready', (data) => {
+                console.log('Socket ready with server\n' + JSON.stringify(data))
+                if (data.admin_id == client_session_id) {
+                    // alert('You can start game!!!')
+                    document.getElementById("mainpage").style.display = 'none'
+                    document.getElementById("page_start").style.display = 'block'
+                    document.getElementById("div_btn").disabled = false
+                    // document.getElementById("rest_client").innerHTML = 'Enought client'
+                    document.getElementById("btn").src = "./images/start_button.png"
+
+                } else if (data.second_id == client_session_id) {
+                    console.log('second client in room')
+                    document.getElementById("mainpage").style.display = 'none'
+                    document.getElementById("page_start").style.display = 'block'
+                    document.getElementById("btn").src = "./images/waiting.png"
+                    // document.getElementById("rest_client").innerHTML = 'Wait admin start'
+                    document.getElementById("div_btn").disabled = true
+                } else if (data.third_id == client_session_id) {
+                    console.log('third client in room')
+                    document.getElementById("mainpage").style.display = 'none'
+                    document.getElementById("page_start").style.display = 'block'
+                    document.getElementById("btn").src = "./images/waiting.png"
+                    // document.getElementById("rest_client").innerHTML = 'Wait admin start'
+                    document.getElementById("div_btn").disabled = true
+                } else {
+                    console.log('Nothing ready')
+                }
+            })
+
+            socket.on('full', (data) => {
+                console.log('Socket full with server\n' + JSON.stringify(data))
+                // if (data.admin_id == client_session_id) {
+                alert('Exist room')
+                // } else {
+                // console.log('Else of full event')
+                // }
+            })
+            socket.on('playing', (data) => {
+                console.log('Socket playing with server\n' + JSON.stringify(data))
+                // document.getElementById("rest_client").innerHTML = 'PLAYING'
+
+                if (data.admin_id == client_session_id) {
+                    console.log('admin playing client in room')
+                    console.log('Your id : ' + client_session_id)
+                    document.getElementById("div_btn").disabled = true
+                    document.getElementById("btn").src = "./images/playing.png"
+                } else if (data.second_id == client_session_id) {
+                    console.log('second playing client in room')
+                    console.log('Your id : ' + client_session_id)
+                    document.getElementById("div_btn").disabled = true
+                    document.getElementById("btn").src = "./images/playing.png"
+                } else if (data.third_id == client_session_id) {
+                    console.log('third playing client in room')
+                    console.log('Your id : ' + client_session_id)
+                    document.getElementById("div_btn").disabled = true
+                    document.getElementById("btn").src = "./images/playing.png"
+                } else {
+                    console.log('Nothing ready')
+                    document.getElementById("div_btn").disabled = true
+                    document.getElementById("btn").src = "./images/playing.png"
+                }
+            })
+
+            socket.on('finishgame', (data) => {
+                console.log('Socket finish game from server\n' + JSON.stringify(data))
+                alert('Exist Game Finish, You can create new game')
+                //Change scene
+                document.getElementById("mainpage").style.display = 'block'
+                document.getElementById("page_start").style.display = 'none'
+                document.getElementById("btn").src = "./images/start_button.png"
+
+                started = false
+            })
+            
+            socket.on('whois',()=>{
+                console.log('Received request who is: '+client_session_id)
+                socket.emit('itisme',client_session_id)
+            })
+
+        })
+        function handlePress() {
+            console.log('press')
+            if (started == false) {
+                console.log('change to playing')
+                // document.getElementById("btn").src = "./images/playing.png"
+                started = true
+                document.getElementById("div_btn").disabled = true
+                //send event play game to server
+                socket.emit('played', {
+                    admin_id: client_session_id,
+                    mode: room_mode
+                })
+
+                console.log('Data send to server \nAdmin id :' + client_session_id + '\nMode: ' + room_mode)
+            } else {
+                console.log('No handle')
+
+            }
+        }
+        function handleChooseMode(mode) {
+            switch (mode) {
+                case 1: {
+                    room_mode = 'single'
+                    socket.emit('create', {
+                        id: client_session_id,
+                        mode: room_mode
+                    });
+                    console.log('Create single room');
+                    break;
+                }
+                case 2: {
+                    room_mode = 'double'
+                    socket.emit('create', {
+                        id: client_session_id,
+                        mode: room_mode
+                    });;
+                    console.log('Create double room')
+                    break;
+                }
+                case 3: {
+                    room_mode = 'tripple'
+                    socket.emit('create', {
+                        id: client_session_id,
+                        mode: room_mode
+                    });;
+                    console.log('Create double room')
+                    break;
+                }
+            }
+        }
+
+
+
+    </script>
+    <style>
+        .page {
+            background-color: red;
+            text-align: center;
+            height: 100vh;
+            width: 100wh;
+        }
+
+        .divBig {
+            height: auto;
+            width: 100%;
+            align-items: center;
+        }
+
+        .imgShow {
+            height: 100;
+            width: 100;
+            align-self: center;
+            display: inline;
+        }
+
+        #page_start {
+            display: none;
+            margin: auto;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 100;
+            left: 0;
+            /* background-color: blue; */
+        }
+    </style>
+</head>
+
+<body style="padding: 0;margin: 0;align-content: center;text-align: center;">
+    <div id="mainpage" class="page">
+        <div class="divBig">
+            <img onclick="handleChooseMode(1)" id="singlemode" class="imgShow" src="./images/1_player.png" />
+        </div>
+        <div class="divBig">
+            <img onclick="handleChooseMode(2)" id="doublemode" class="imgShow" src="./images/2_player.png" />
+        </div>
+        <div class="divBig">
+            <img onclick="handleChooseMode(3)" id="tripplemode" class="imgShow" src="./images/3_player.png" />
+        </div>
+    </div>
+    <div id="page_start">
+        <button disabled id="div_btn" style="height: 200;width: 200;" onclick="handlePress()">
+            <img id="btn" src="./images/start_button.png" />
+        </button>
+
+        <!-- <h1 id="rest_client"></h1> -->
+    </div>
+</body>
+
+</html>
